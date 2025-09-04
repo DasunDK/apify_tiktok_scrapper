@@ -23,9 +23,12 @@ async def fetch_tiktok_profile(apify_client, profile_url_or_name):
         username = profile_url_or_name.lstrip("@")
 
     input_data = {
-        "profiles": [username],
-        "resultsLimit": 3,
-        "maxPosts": 3
+        "profiles": [username],   # TikTok username(s)
+        "resultsLimit": 1,        # Limit to 1 profile result
+        "maxPosts": 3,            # Only fetch 3 posts
+        "includeProfile": True,   # Get full profile info
+        "includePosts": True      # Enable post scraping
+        # Removed 'onlyPostUrls' to ensure video URLs appear
     }
 
     call_result = await actor_client.call(run_input=input_data)
@@ -50,17 +53,20 @@ async def fetch_tiktok_profile(apify_client, profile_url_or_name):
             bio = author.get("signature") or author.get("bioLink") or "N/A"
             profile_pic = author.get("avatar", "N/A")
 
-        # Collect post links
-        if "webVideoUrl" in item:
-            post_links.append(item["webVideoUrl"])
+        # Collect only post URLs
+        video = item.get("video", {})
+        urls = video.get("urls", [])
+        if urls:
+            post_links.append(urls[0])
 
     return {
         "username": username_val,
         "profile_name": profile_name,
         "bio": bio,
         "profile_pic": profile_pic,
-        "latest_posts": post_links[:3]
+        "latest_posts": post_links  # Already limited to 3 by input_data["maxPosts"]
     }
+
 
 # ==========================
 # Save profile to JSON
@@ -77,12 +83,15 @@ async def save_tiktok_profile(profile_url_or_name, output_file="tiktok_profile.j
 
     print(f"💾 Saved TikTok profile data to {output_file}")
 
+
 # ==========================
 # Main
 # ==========================
 async def main():
-    profile = "https://www.tiktok.com/@oburno0"  # or just "oburno0"
+    # Example: profile URL or username
+    profile = "https://www.tiktok.com/@khaby.lame"  # or just "khaby.lame"
     await save_tiktok_profile(profile)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
